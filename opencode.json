@@ -1,0 +1,60 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": [
+    "PRODUCT.md",
+    "ARCHITECTURE.md",
+    "CONTRIBUTING.md"
+  ],
+  "agent": {
+    "plan": {
+      "description": "Analyze code and create implementation plans without making changes",
+      "mode": "primary",
+      "permission": {
+        "edit": "deny",
+        "bash": {
+          "*": "deny",
+          "go test *": "allow",
+          "go build *": "allow",
+          "make test": "allow",
+          "make lint": "allow",
+          "git status": "allow",
+          "git diff *": "allow",
+          "git log *": "allow"
+        }
+      }
+    },
+    "tdd": {
+      "description": "Test-driven implementation with full tool access",
+      "mode": "subagent",
+      "temperature": 0.2
+    },
+    "review": {
+      "description": "Code review for quality, security, and Go best practices",
+      "mode": "subagent",
+      "temperature": 0.1,
+      "permission": {
+        "edit": "deny",
+        "bash": {
+          "*": "deny",
+          "go test *": "allow",
+          "make lint": "allow",
+          "git diff *": "allow"
+        }
+      }
+    }
+  },
+  "command": {
+    "test": {
+      "description": "Run tests with coverage",
+      "template": "Run `make test` and analyze the results. If there are failures, explain the issues and suggest fixes."
+    },
+    "lint": {
+      "description": "Run linter and fix issues",
+      "template": "Run `make lint` and fix any issues found. Explain what was wrong and how you fixed it."
+    },
+    "build": {
+      "description": "Build the project",
+      "template": "Run `make build` and verify the binary works with `./cloud-janitor version`."
+    }
+  }
+}

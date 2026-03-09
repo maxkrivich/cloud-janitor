@@ -1,0 +1,81 @@
+# Cloud Janitor Configuration Example
+# Copy this file to cloud-janitor.yaml and customize for your environment.
+
+# AWS Configuration
+aws:
+  # List of AWS accounts to scan
+  # Leave empty to use current AWS credentials
+  accounts:
+    - id: "123456789012"
+      name: "dev-account"
+      role: "arn:aws:iam::123456789012:role/CloudJanitor"
+    - id: "987654321098"
+      name: "staging-account"
+      role: "arn:aws:iam::987654321098:role/CloudJanitor"
+  
+  # AWS regions to scan
+  regions:
+    - us-east-1
+    - us-west-2
+    - eu-west-1
+
+# Expiration settings
+expiration:
+  # Tag name used to track expiration dates
+  tag_name: "expiration-date"
+  
+  # Date format for expiration dates (Go time format)
+  date_format: "2006-01-02"
+  
+  # Default number of days before a resource expires
+  default_days: 30
+  
+  # Resources with these tags will be excluded from cleanup
+  exclude_tags:
+    - key: "Environment"
+      value: "production"
+    - key: "DoNotDelete"
+      value: "true"
+
+# Resource scanners to enable
+scanners:
+  ec2: true          # EC2 instances
+  ebs: true          # EBS volumes
+  ebs_snapshots: true # EBS snapshots
+  elastic_ip: true   # Elastic IPs
+
+# Notification settings
+notifications:
+  enabled: true
+  
+  # Slack notifications
+  slack:
+    enabled: true
+    # Use environment variable for webhook URL
+    webhook_url: "${SLACK_WEBHOOK_URL}"
+    # Optional: override channel (uses webhook default if not set)
+    channel: "#cloud-janitor"
+  
+  # Discord notifications
+  discord:
+    enabled: false
+    webhook_url: "${DISCORD_WEBHOOK_URL}"
+  
+  # Generic webhook notifications
+  webhook:
+    enabled: false
+    url: "https://your-service.com/webhooks/cloud-janitor"
+    headers:
+      Authorization: "Bearer ${WEBHOOK_TOKEN}"
+      Content-Type: "application/json"
+
+# Output settings
+output:
+  # Output format: table or json
+  format: table
+  
+  # Enable verbose output
+  verbose: false
+
+# Dry run mode - preview changes without making them
+dry_run: false

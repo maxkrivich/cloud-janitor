@@ -1,0 +1,151 @@
+# golangci-lint configuration
+# Aligned with Uber Go Style Guide: https://github.com/uber-go/guide/blob/master/style.md
+
+linters:
+  enable:
+    # Default linters
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    
+    # Formatting
+    - gofmt
+    - goimports
+    
+    # Style
+    - misspell
+    - unconvert
+    - unparam
+    - gocritic
+    - revive
+    - nolintlint
+    
+    # Error handling (Uber style)
+    - errorlint      # Check error wrapping
+    - wrapcheck      # Ensure errors from external packages are wrapped
+    
+    # Code quality
+    - bodyclose      # Check HTTP response body is closed
+    - noctx          # Check context usage in HTTP requests
+    - prealloc       # Suggest preallocating slices
+    - copyloopvar    # Check for loop variable capture (replaces deprecated exportloopref)
+    
+    # Security
+    - gosec          # Security scanner
+
+linters-settings:
+  errcheck:
+    # Check type assertions (Uber: Handle Type Assertion Failures)
+    check-type-assertions: true
+    check-blank: true
+  
+  govet:
+    enable-all: true
+    disable:
+      - fieldalignment  # Can be noisy, not required by Uber guide
+  
+  goimports:
+    # Uber style: group imports (stdlib, external, internal)
+    local-prefixes: github.com/maxkrivich/cloud-janitor
+  
+  misspell:
+    locale: US
+  
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - experimental
+      - opinionated
+      - performance
+      - style
+    disabled-checks:
+      - dupImport
+      - ifElseChain
+      - octalLiteral
+      - whyNoLint
+      - hugeParam       # Allow value receivers on domain types for immutability
+      - rangeValCopy    # Go 1.22+ handles range vars by value safely
+  
+  errorlint:
+    # Uber style: use %w for wrapping errors
+    errorf: true
+    asserts: true
+    comparison: true
+  
+  revive:
+    rules:
+      # Uber style: error handling
+      - name: blank-imports
+      - name: error-return
+      - name: error-strings
+      - name: error-naming
+      - name: errorf
+      
+      # Uber style: context as first argument
+      - name: context-as-argument
+      - name: context-keys-type
+      
+      # Uber style: naming conventions
+      - name: var-naming
+      - name: var-declaration
+      - name: receiver-naming
+      - name: package-comments
+      - name: exported
+      - name: unexported-return
+      
+      # Uber style: reduce nesting
+      - name: indent-error-flow
+      - name: superfluous-else
+      - name: if-return
+      
+      # Uber style: avoid builtins
+      - name: redefines-builtin-id
+      
+      # Other good practices
+      - name: dot-imports
+      - name: increment-decrement
+      - name: range
+      - name: time-naming
+      - name: empty-block
+      - name: unused-parameter
+      - name: unreachable-code
+  
+  gosec:
+    excludes:
+      - G104  # Audit errors not checked (covered by errcheck)
+    config:
+      G306: "0644"  # Expect WriteFile permissions to be 0644 or less
+
+issues:
+  exclude-dirs:
+    - vendor
+  exclude-rules:
+    # Exclude some linters from running on test files
+    - path: _test\.go
+      linters:
+        - gocritic
+        - unparam
+        - wrapcheck  # Test errors don't need wrapping
+        - gosec      # Test files can have less strict security
+    
+    # Exclude main.go from some checks
+    - path: main\.go
+      linters:
+        - gocritic
+    
+    # Allow using fmt.Errorf without %w in some cases
+    - linters:
+        - errorlint
+      text: "non-wrapping format verb"
+  
+  # Report all issues
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+run:
+  timeout: 5m
+  issues-exit-code: 1
+  tests: true
