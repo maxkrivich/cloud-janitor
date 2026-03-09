@@ -44,7 +44,7 @@ Cloud Janitor implements a simple two-step process:
 
 ### How It Works
 
-1. **Daily Scheduled Run**: Cloud Janitor runs daily via TeamCity (or other CI)
+1. **Daily Scheduled Run**: Cloud Janitor runs daily via Github Actions (or other CI)
 2. **Tag New Resources**: Resources without an `expiration-date` tag get one set to 30 days from now
 3. **Delete Expired Resources**: Resources past their expiration date are automatically deleted
 4. **Preserve Important Resources**: Users can extend expiration by updating the tag manually
@@ -247,19 +247,20 @@ notifications:
 
 ### Phase 1: MVP (Complete)
 - Core tagging and cleanup logic
-- EC2, EBS, Elastic IP scanners
+- EC2, EBS, Elastic IP, EBS Snapshots scanners
 - Configuration file support
 - Dry-run mode
 - Basic CLI (run, list)
+- Slack notifications (webhook, bot token, app token modes)
+- Discord notifications (webhook, bot token modes)
+- Generic webhook notifications
 
 ### Phase 2: Extended AWS Coverage
 - Additional scanners (ELB, RDS)
 - Multi-account support via assume role
-- TeamCity integration guide
-- Slack notifications for deletions
 
-### Phase 3: Extended Notifications
-- Microsoft Teams notifier
+### Phase 3: Extended Notifications (In Progress)
+- ✅ Microsoft Teams notifier
 - Google Chat notifier
 - Telegram notifier
 

@@ -4,7 +4,7 @@ Cloud Janitor is a Go CLI tool for automated AWS resource cleanup. It uses tag-b
 
 ## How It Works
 
-Cloud Janitor runs daily (via TeamCity or CI) and performs a two-step process:
+Cloud Janitor runs daily (in the CI) and performs a two-step process:
 
 1. **Tag**: Resources without an `expiration-date` tag get tagged with a date 30 days from now
 2. **Cleanup**: Resources with an `expiration-date` in the past are deleted

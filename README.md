@@ -261,7 +261,7 @@ Cloud Janitor requires the following IAM permissions:
 
 ## CI/CD Integration
 
-### TeamCity / GitHub Actions
+### GitHub Actions
 
 Run Cloud Janitor daily to keep development accounts clean:
 
