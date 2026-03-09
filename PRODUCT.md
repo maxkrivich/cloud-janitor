@@ -64,49 +64,44 @@ Cloud Janitor implements a simple two-step process:
 
 ## Supported Resources
 
+Cloud Janitor focuses on the **most expensive resources first** (80/20 rule). Each cloud provider has a prioritized list of resources ordered by typical cost impact in development accounts. This ensures maximum cost savings with minimal implementation effort.
+
+Resources are categorized by cost type:
+- **Compute**: Charged hourly, even when idle (highest impact)
+- **Storage**: Charged monthly per GB (accumulates over time)
+
 ### AWS
 
-#### Phase 1 (MVP) - Complete
-- **EC2 Instances**: Running and stopped instances
-- **EBS Volumes**: Attached and unattached volumes
-- **EBS Snapshots**: All snapshots
-- **Elastic IPs**: Associated and unassociated
-
-#### Phase 2
-- **ELB/ALB/NLB**: Load balancers
-- **RDS Instances**: Database instances
-- **RDS Snapshots**: Database snapshots
-
-#### Phase 3
-- **Lambda Functions**: Unused functions
-- **ECR Images**: Old container images
-- **AMIs**: Custom machine images
+| Priority | Resource Type | Cost Type | Status | Est. Monthly Cost |
+|----------|--------------|-----------|--------|-------------------|
+| 1 | **EC2 Instances** | Compute | ✅ Complete | $50-500+ |
+| 2 | **RDS Instances** | Compute | 🔜 Phase 2 | $100-1000+ |
+| 3 | **Elastic IPs** (unattached) | Compute | ✅ Complete | $3.60 each |
+| 4 | **EBS Volumes** | Storage | ✅ Complete | $10-100 |
+| 5 | **Load Balancers** (ALB/NLB) | Compute | 🔜 Phase 2 | $20-50 each |
+| 6 | **EBS Snapshots** | Storage | ✅ Complete | $5-50 |
+| 7 | **ECR Images** | Storage | 🔜 Phase 3 | $1-20 |
+| 8 | **AMIs** | Storage | 🔜 Phase 3 | $1-10 |
 
 ### GCP (Planned)
 
-#### Phase 1
-- **Compute Instances**: Running and stopped VMs
-- **Persistent Disks**: Attached and unattached
-- **Snapshots**: Disk snapshots
-- **Static IPs**: External IP addresses
-
-#### Phase 2
-- **Cloud SQL Instances**: Database instances
-- **GKE Clusters**: Kubernetes clusters
-- **Cloud Functions**: Unused functions
+| Priority | Resource Type | Cost Type | Status |
+|----------|--------------|-----------|--------|
+| 1 | **Compute Instances** | Compute | 🔜 Phase 4 |
+| 2 | **Cloud SQL Instances** | Compute | 🔜 Phase 4 |
+| 3 | **Static IPs** (unattached) | Compute | 🔜 Phase 4 |
+| 4 | **Persistent Disks** | Storage | 🔜 Phase 4 |
+| 5 | **Snapshots** | Storage | 🔜 Phase 4 |
 
 ### Azure (Planned)
 
-#### Phase 1
-- **Virtual Machines**: Running and stopped VMs
-- **Managed Disks**: Attached and unattached
-- **Snapshots**: Disk snapshots
-- **Public IPs**: Associated and unassociated
-
-#### Phase 2
-- **Azure SQL**: Database instances
-- **AKS Clusters**: Kubernetes clusters
-- **Azure Functions**: Unused functions
+| Priority | Resource Type | Cost Type | Status |
+|----------|--------------|-----------|--------|
+| 1 | **Virtual Machines** | Compute | 🔜 Phase 5 |
+| 2 | **Azure SQL** | Compute | 🔜 Phase 5 |
+| 3 | **Public IPs** (unassociated) | Compute | 🔜 Phase 5 |
+| 4 | **Managed Disks** | Storage | 🔜 Phase 5 |
+| 5 | **Snapshots** | Storage | 🔜 Phase 5 |
 
 ## Configuration
 

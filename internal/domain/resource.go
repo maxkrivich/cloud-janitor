@@ -5,9 +5,36 @@ package domain
 import "time"
 
 // ResourceType identifies the type of cloud resource.
+// Resource types are prefixed with the provider name for clarity.
 type ResourceType string
 
 const (
+	// AWS resource types (ordered by cost priority, 1 = most expensive).
+	ResourceTypeAWSEC2       ResourceType = "aws:ec2"      // Priority 1: Compute
+	ResourceTypeAWSRDS       ResourceType = "aws:rds"      // Priority 2: Compute
+	ResourceTypeAWSElasticIP ResourceType = "aws:eip"      // Priority 3: Compute
+	ResourceTypeAWSEBS       ResourceType = "aws:ebs"      // Priority 4: Storage
+	ResourceTypeAWSELB       ResourceType = "aws:elb"      // Priority 5: Compute
+	ResourceTypeAWSSnapshot  ResourceType = "aws:snapshot" // Priority 6: Storage
+	ResourceTypeAWSECR       ResourceType = "aws:ecr"      // Priority 7: Storage
+	ResourceTypeAWSAMI       ResourceType = "aws:ami"      // Priority 8: Storage
+
+	// GCP resource types (ordered by cost priority).
+	ResourceTypeGCPInstance ResourceType = "gcp:compute-instance" // Priority 1: Compute
+	ResourceTypeGCPCloudSQL ResourceType = "gcp:cloud-sql"        // Priority 2: Compute
+	ResourceTypeGCPStaticIP ResourceType = "gcp:static-ip"        // Priority 3: Compute
+	ResourceTypeGCPDisk     ResourceType = "gcp:disk"             // Priority 4: Storage
+	ResourceTypeGCPSnapshot ResourceType = "gcp:snapshot"         // Priority 5: Storage
+
+	// Azure resource types (ordered by cost priority).
+	ResourceTypeAzureVM       ResourceType = "azure:vm"        // Priority 1: Compute
+	ResourceTypeAzureSQL      ResourceType = "azure:sql"       // Priority 2: Compute
+	ResourceTypeAzurePublicIP ResourceType = "azure:public-ip" // Priority 3: Compute
+	ResourceTypeAzureDisk     ResourceType = "azure:disk"      // Priority 4: Storage
+	ResourceTypeAzureSnapshot ResourceType = "azure:snapshot"  // Priority 5: Storage
+
+	// Legacy resource types (deprecated, use provider-prefixed types).
+	// These are kept for backward compatibility with existing code.
 	ResourceTypeEC2         ResourceType = "ec2"
 	ResourceTypeEBS         ResourceType = "ebs"
 	ResourceTypeEBSSnapshot ResourceType = "ebs_snapshot"

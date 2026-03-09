@@ -288,13 +288,71 @@ type ResourceRepository interface {
 type ResourceType string
 
 const (
-    ResourceTypeEC2         ResourceType = "ec2"
-    ResourceTypeEBS         ResourceType = "ebs"
-    ResourceTypeEBSSnapshot ResourceType = "ebs_snapshot"
-    ResourceTypeElasticIP   ResourceType = "elastic_ip"
-    ResourceTypeELB         ResourceType = "elb"
-    ResourceTypeRDS         ResourceType = "rds"
+    // AWS resource types (priority order)
+    ResourceTypeAWSEC2       ResourceType = "aws:ec2"         // Priority 1
+    ResourceTypeAWSRDS       ResourceType = "aws:rds"         // Priority 2
+    ResourceTypeAWSElasticIP ResourceType = "aws:eip"         // Priority 3
+    ResourceTypeAWSEBS       ResourceType = "aws:ebs"         // Priority 4
+    ResourceTypeAWSELB       ResourceType = "aws:elb"         // Priority 5
+    ResourceTypeAWSSnapshot  ResourceType = "aws:snapshot"    // Priority 6
+    ResourceTypeAWSECR       ResourceType = "aws:ecr"         // Priority 7
+    ResourceTypeAWSAMI       ResourceType = "aws:ami"         // Priority 8
+    
+    // GCP resource types (planned)
+    ResourceTypeGCPInstance  ResourceType = "gcp:compute-instance"
+    ResourceTypeGCPCloudSQL  ResourceType = "gcp:cloud-sql"
+    ResourceTypeGCPStaticIP  ResourceType = "gcp:static-ip"
+    ResourceTypeGCPDisk      ResourceType = "gcp:disk"
+    ResourceTypeGCPSnapshot  ResourceType = "gcp:snapshot"
+    
+    // Azure resource types (planned)
+    ResourceTypeAzureVM       ResourceType = "azure:vm"
+    ResourceTypeAzureSQL      ResourceType = "azure:sql"
+    ResourceTypeAzurePublicIP ResourceType = "azure:public-ip"
+    ResourceTypeAzureDisk     ResourceType = "azure:disk"
+    ResourceTypeAzureSnapshot ResourceType = "azure:snapshot"
 )
+
+// CostCategory indicates how the resource is billed
+type CostCategory string
+
+const (
+    CostCategoryCompute CostCategory = "compute" // Hourly charges, even when idle
+    CostCategoryStorage CostCategory = "storage" // Monthly per-GB charges
+)
+```
+
+### ResourceCatalog
+
+The ResourceCatalog provides a prioritized list of supported resources per cloud provider. Resources are ordered by cost impact (80/20 rule) to maximize savings.
+
+```go
+// internal/domain/catalog.go
+package domain
+
+// ResourceDefinition describes a cloud resource type with its cost characteristics.
+type ResourceDefinition struct {
+    Type         ResourceType
+    Provider     CloudProvider
+    CostCategory CostCategory
+    Priority     int    // Lower = more expensive (1 = highest priority)
+    Description  string
+}
+
+// ResourceCatalog provides the prioritized list of supported resources.
+type ResourceCatalog struct{}
+
+// AWSResources returns AWS resources ordered by cost priority.
+func (c *ResourceCatalog) AWSResources() []ResourceDefinition
+
+// GCPResources returns GCP resources ordered by cost priority.
+func (c *ResourceCatalog) GCPResources() []ResourceDefinition
+
+// AzureResources returns Azure resources ordered by cost priority.
+func (c *ResourceCatalog) AzureResources() []ResourceDefinition
+
+// GetDefinition returns the definition for a specific resource type.
+func (c *ResourceCatalog) GetDefinition(resourceType ResourceType) (ResourceDefinition, bool)
 ```
 
 ### Notifier
@@ -362,37 +420,6 @@ type Provider interface {
     // The returned repositories implement ResourceRepository interface.
     CreateRepositories(ctx context.Context, account Account) ([]ResourceRepository, error)
 }
-```
-
-### Provider-Specific Resource Types
-
-Resource types are prefixed with the provider name for clarity:
-
-```go
-// internal/domain/resource.go
-type ResourceType string
-
-const (
-    // AWS resource types
-    ResourceTypeAWSEC2         ResourceType = "aws:ec2"
-    ResourceTypeAWSEBS         ResourceType = "aws:ebs"
-    ResourceTypeAWSSnapshot    ResourceType = "aws:snapshot"
-    ResourceTypeAWSElasticIP   ResourceType = "aws:eip"
-    ResourceTypeAWSELB         ResourceType = "aws:elb"
-    ResourceTypeAWSRDS         ResourceType = "aws:rds"
-    
-    // GCP resource types (planned)
-    ResourceTypeGCPInstance    ResourceType = "gcp:compute-instance"
-    ResourceTypeGCPDisk        ResourceType = "gcp:disk"
-    ResourceTypeGCPSnapshot    ResourceType = "gcp:snapshot"
-    ResourceTypeGCPStaticIP    ResourceType = "gcp:static-ip"
-    
-    // Azure resource types (planned)
-    ResourceTypeAzureVM        ResourceType = "azure:vm"
-    ResourceTypeAzureDisk      ResourceType = "azure:disk"
-    ResourceTypeAzureSnapshot  ResourceType = "azure:snapshot"
-    ResourceTypeAzurePublicIP  ResourceType = "azure:public-ip"
-)
 ```
 
 ### Provider Registry
