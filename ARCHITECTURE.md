@@ -193,7 +193,7 @@ cloud-janitor/
 │
 ├── internal/
 │   ├── domain/                    # Domain Layer (Core)
-│   │   ├── resource.go            # Resource entity
+│   │   ├── resource.go            # Resource entity, ResourceType constants
 │   │   ├── account.go             # Account entity
 │   │   ├── repository.go          # ResourceRepository interface
 │   │   ├── notifier.go            # Notifier interface
@@ -211,10 +211,27 @@ cloud-janitor/
 │   ├── infra/                     # Infrastructure Layer
 │   │   ├── aws/                   # AWS adapters
 │   │   │   ├── provider.go        # AWS Provider implementation
-│   │   │   ├── client.go          # AWS client factory
-│   │   │   ├── ec2_repository.go  # EC2 ResourceRepository impl
-│   │   │   ├── ebs_repository.go  # EBS ResourceRepository impl
-│   │   │   ├── eip_repository.go  # Elastic IP ResourceRepository impl
+│   │   │   ├── client.go          # AWS client factory (all services)
+│   │   │   ├── repository_factory.go  # Creates all repositories
+│   │   │   │
+│   │   │   │   # Phase 1 Scanners
+│   │   │   ├── ec2_repository.go      # EC2 instances
+│   │   │   ├── ebs_repository.go      # EBS volumes
+│   │   │   ├── snapshot_repository.go # EBS snapshots
+│   │   │   ├── eip_repository.go      # Elastic IPs
+│   │   │   │
+│   │   │   │   # Phase 2 Scanners
+│   │   │   ├── rds_repository.go      # RDS instances
+│   │   │   ├── elb_repository.go      # ALB/NLB load balancers
+│   │   │   ├── natgw_repository.go    # NAT gateways
+│   │   │   ├── elasticache_repository.go  # ElastiCache clusters
+│   │   │   ├── opensearch_repository.go   # OpenSearch domains
+│   │   │   ├── eks_repository.go      # EKS clusters
+│   │   │   ├── redshift_repository.go # Redshift clusters
+│   │   │   ├── sagemaker_repository.go    # SageMaker notebooks
+│   │   │   ├── ami_repository.go      # AMIs
+│   │   │   ├── logs_repository.go     # CloudWatch log groups
+│   │   │   │
 │   │   │   └── sts.go             # AssumeRole helper
 │   │   │
 │   │   ├── gcp/                   # GCP adapters (planned)
@@ -237,6 +254,7 @@ cloud-janitor/
 │   │   ├── notify/                # Notification adapters
 │   │   │   ├── slack.go           # Slack Notifier impl
 │   │   │   ├── discord.go         # Discord Notifier impl
+│   │   │   ├── teams.go           # Microsoft Teams Notifier impl
 │   │   │   ├── webhook.go         # Generic webhook Notifier impl
 │   │   │   ├── multi.go           # Multi-notifier (fan-out)
 │   │   │   └── noop.go            # No-op Notifier (for dry-run)
@@ -289,14 +307,20 @@ type ResourceType string
 
 const (
     // AWS resource types (priority order)
-    ResourceTypeAWSEC2       ResourceType = "aws:ec2"         // Priority 1
-    ResourceTypeAWSRDS       ResourceType = "aws:rds"         // Priority 2
-    ResourceTypeAWSElasticIP ResourceType = "aws:eip"         // Priority 3
-    ResourceTypeAWSEBS       ResourceType = "aws:ebs"         // Priority 4
-    ResourceTypeAWSELB       ResourceType = "aws:elb"         // Priority 5
-    ResourceTypeAWSSnapshot  ResourceType = "aws:snapshot"    // Priority 6
-    ResourceTypeAWSECR       ResourceType = "aws:ecr"         // Priority 7
-    ResourceTypeAWSAMI       ResourceType = "aws:ami"         // Priority 8
+    ResourceTypeAWSEC2         ResourceType = "aws:ec2"         // Priority 1
+    ResourceTypeAWSRDS         ResourceType = "aws:rds"         // Priority 2
+    ResourceTypeAWSElasticIP   ResourceType = "aws:eip"         // Priority 3
+    ResourceTypeAWSEBS         ResourceType = "aws:ebs"         // Priority 4
+    ResourceTypeAWSELB         ResourceType = "aws:elb"         // Priority 5
+    ResourceTypeAWSSnapshot    ResourceType = "aws:snapshot"    // Priority 6
+    ResourceTypeAWSNATGateway  ResourceType = "aws:natgw"       // Priority 7
+    ResourceTypeAWSElastiCache ResourceType = "aws:elasticache" // Priority 8
+    ResourceTypeAWSOpenSearch  ResourceType = "aws:opensearch"  // Priority 9
+    ResourceTypeAWSEKS         ResourceType = "aws:eks"         // Priority 10
+    ResourceTypeAWSRedshift    ResourceType = "aws:redshift"    // Priority 11
+    ResourceTypeAWSSageMaker   ResourceType = "aws:sagemaker"   // Priority 12
+    ResourceTypeAWSAMI         ResourceType = "aws:ami"         // Priority 13
+    ResourceTypeAWSLogs        ResourceType = "aws:logs"        // Priority 14
     
     // GCP resource types (planned)
     ResourceTypeGCPInstance  ResourceType = "gcp:compute-instance"
@@ -625,12 +649,37 @@ expiration:
       value: "true"
     - key: "expiration-date"
       value: "never"
+  
+  # Force delete RDS instances with deletion protection enabled
+  force_delete_protected: false
+  
+  # Delete EKS node groups before deleting clusters
+  eks_cascade_delete: true
+  
+  # Skip CloudWatch log groups matching these patterns
+  logs_skip_patterns:
+    - "/aws/lambda/*"
+    - "/aws/rds/*"
+    - "/aws/eks/*"
 
 scanners:
+  # Phase 1 scanners
   ec2: true
   ebs: true
   ebs_snapshots: true
   elastic_ip: true
+  
+  # Phase 2 scanners
+  rds: true
+  elb: true
+  nat_gateway: true
+  elasticache: true
+  opensearch: true
+  eks: true
+  redshift: true
+  sagemaker: true
+  ami: true
+  logs: true
 
 notifications:
   enabled: true
@@ -690,6 +739,10 @@ func TestTagResourcesUseCase(t *testing.T) {
 
 ## IAM Permissions
 
+Cloud Janitor requires permissions to list, tag, and delete resources across 14 AWS services. Below is the complete IAM policy.
+
+### Full IAM Policy
+
 ```json
 {
   "Version": "2012-10-17",
@@ -702,11 +755,110 @@ func TestTagResourcesUseCase(t *testing.T) {
         "ec2:DescribeVolumes",
         "ec2:DescribeSnapshots",
         "ec2:DescribeAddresses",
+        "ec2:DescribeNatGateways",
+        "ec2:DescribeImages",
         "ec2:CreateTags",
         "ec2:TerminateInstances",
         "ec2:DeleteVolume",
         "ec2:DeleteSnapshot",
-        "ec2:ReleaseAddress"
+        "ec2:ReleaseAddress",
+        "ec2:DeleteNatGateway",
+        "ec2:DeregisterImage"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "RDSPermissions",
+      "Effect": "Allow",
+      "Action": [
+        "rds:DescribeDBInstances",
+        "rds:ListTagsForResource",
+        "rds:AddTagsToResource",
+        "rds:DeleteDBInstance",
+        "rds:ModifyDBInstance"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "ELBPermissions",
+      "Effect": "Allow",
+      "Action": [
+        "elasticloadbalancing:DescribeLoadBalancers",
+        "elasticloadbalancing:DescribeTags",
+        "elasticloadbalancing:AddTags",
+        "elasticloadbalancing:DeleteLoadBalancer"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "ElastiCachePermissions",
+      "Effect": "Allow",
+      "Action": [
+        "elasticache:DescribeCacheClusters",
+        "elasticache:DescribeReplicationGroups",
+        "elasticache:ListTagsForResource",
+        "elasticache:AddTagsToResource",
+        "elasticache:DeleteCacheCluster",
+        "elasticache:DeleteReplicationGroup"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "OpenSearchPermissions",
+      "Effect": "Allow",
+      "Action": [
+        "es:ListDomainNames",
+        "es:DescribeDomain",
+        "es:ListTags",
+        "es:AddTags",
+        "es:DeleteDomain"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "EKSPermissions",
+      "Effect": "Allow",
+      "Action": [
+        "eks:ListClusters",
+        "eks:DescribeCluster",
+        "eks:ListNodegroups",
+        "eks:DeleteNodegroup",
+        "eks:TagResource",
+        "eks:DeleteCluster"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "RedshiftPermissions",
+      "Effect": "Allow",
+      "Action": [
+        "redshift:DescribeClusters",
+        "redshift:CreateTags",
+        "redshift:DeleteCluster"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "SageMakerPermissions",
+      "Effect": "Allow",
+      "Action": [
+        "sagemaker:ListNotebookInstances",
+        "sagemaker:DescribeNotebookInstance",
+        "sagemaker:ListTags",
+        "sagemaker:AddTags",
+        "sagemaker:StopNotebookInstance",
+        "sagemaker:DeleteNotebookInstance"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "CloudWatchLogsPermissions",
+      "Effect": "Allow",
+      "Action": [
+        "logs:DescribeLogGroups",
+        "logs:ListTagsForResource",
+        "logs:TagResource",
+        "logs:DeleteLogGroup"
       ],
       "Resource": "*"
     },
@@ -719,6 +871,73 @@ func TestTagResourcesUseCase(t *testing.T) {
   ]
 }
 ```
+
+### Minimal Policy (Read-Only + Tag)
+
+For dry-run mode or tag-only operations, use this minimal policy:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ReadOnly",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:Describe*",
+        "rds:Describe*",
+        "rds:ListTagsForResource",
+        "elasticloadbalancing:Describe*",
+        "elasticache:Describe*",
+        "elasticache:ListTagsForResource",
+        "es:ListDomainNames",
+        "es:DescribeDomain",
+        "es:ListTags",
+        "eks:List*",
+        "eks:Describe*",
+        "redshift:Describe*",
+        "sagemaker:List*",
+        "sagemaker:Describe*",
+        "logs:Describe*",
+        "logs:ListTagsForResource"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "TagOnly",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:CreateTags",
+        "rds:AddTagsToResource",
+        "elasticloadbalancing:AddTags",
+        "elasticache:AddTagsToResource",
+        "es:AddTags",
+        "eks:TagResource",
+        "redshift:CreateTags",
+        "sagemaker:AddTags",
+        "logs:TagResource"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "AssumeRole",
+      "Effect": "Allow",
+      "Action": "sts:AssumeRole",
+      "Resource": "arn:aws:iam::*:role/CloudJanitor"
+    }
+  ]
+}
+```
+
+### Permission Notes
+
+| Service | Special Considerations |
+|---------|----------------------|
+| **RDS** | `ModifyDBInstance` required to disable deletion protection before delete |
+| **EKS** | Node groups must be deleted before clusters (handled automatically with `eks_cascade_delete`) |
+| **SageMaker** | `StopNotebookInstance` required - running notebooks cannot be deleted |
+| **AMI** | Deregistering AMI also deletes associated EBS snapshots (requires `ec2:DeleteSnapshot`) |
+| **CloudWatch Logs** | Consider using `logs_skip_patterns` to exclude AWS-managed log groups |
 
 ## Error Handling
 

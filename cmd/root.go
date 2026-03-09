@@ -195,6 +195,11 @@ func buildJanitor(ctx context.Context, cfg *config.Config) (*service.Janitor, er
 	// Create repository factory
 	repoFactory := aws.NewRepositoryFactory(clientFactory)
 	repoFactory.WithEnabledTypes(cfg.Scanners.ToEnabledTypes())
+	repoFactory.WithForceDeleteProtected(cfg.Expiration.ForceDeleteProtected)
+	repoFactory.WithEKSCascadeDelete(cfg.Expiration.EKSCascadeDelete)
+	if len(cfg.Expiration.LogsSkipPatterns) > 0 {
+		repoFactory.WithLogsSkipPatterns(cfg.Expiration.LogsSkipPatterns)
+	}
 
 	// Build notifier
 	notifier := buildNotifier(cfg)

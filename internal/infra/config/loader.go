@@ -46,10 +46,13 @@ func (a AccountConfig) ToDomain() domain.Account {
 
 // ExpirationConfig holds expiration-related settings.
 type ExpirationConfig struct {
-	TagName     string       `mapstructure:"tag_name"`
-	DateFormat  string       `mapstructure:"date_format"`
-	DefaultDays int          `mapstructure:"default_days"`
-	ExcludeTags []ExcludeTag `mapstructure:"exclude_tags"`
+	TagName              string       `mapstructure:"tag_name"`
+	DateFormat           string       `mapstructure:"date_format"`
+	DefaultDays          int          `mapstructure:"default_days"`
+	ExcludeTags          []ExcludeTag `mapstructure:"exclude_tags"`
+	ForceDeleteProtected bool         `mapstructure:"force_delete_protected"` // Force delete resources with deletion protection
+	EKSCascadeDelete     bool         `mapstructure:"eks_cascade_delete"`     // Delete EKS node groups before cluster
+	LogsSkipPatterns     []string     `mapstructure:"logs_skip_patterns"`     // Glob patterns to skip CloudWatch Log Groups
 }
 
 // ExcludeTag represents a tag that excludes resources from cleanup.
@@ -69,19 +72,50 @@ func (c ExpirationConfig) ToMap() map[string]string {
 
 // ScannersConfig enables/disables specific scanners.
 type ScannersConfig struct {
+	// Phase 1 scanners (existing)
 	EC2          bool `mapstructure:"ec2"`
 	EBS          bool `mapstructure:"ebs"`
 	EBSSnapshots bool `mapstructure:"ebs_snapshots"`
 	ElasticIP    bool `mapstructure:"elastic_ip"`
+
+	// Phase 2 scanners - P1 (highest ROI)
+	RDS        bool `mapstructure:"rds"`
+	ELB        bool `mapstructure:"elb"`
+	NATGateway bool `mapstructure:"nat_gateway"`
+
+	// Phase 2 scanners - P2
+	ElastiCache bool `mapstructure:"elasticache"`
+	OpenSearch  bool `mapstructure:"opensearch"`
+	EKS         bool `mapstructure:"eks"`
+
+	// Phase 2 scanners - P3
+	Redshift  bool `mapstructure:"redshift"`
+	SageMaker bool `mapstructure:"sagemaker"`
+	AMI       bool `mapstructure:"ami"`
+	Logs      bool `mapstructure:"logs"`
 }
 
 // ToEnabledTypes converts ScannersConfig to a map of enabled resource types.
 func (c ScannersConfig) ToEnabledTypes() map[domain.ResourceType]bool {
 	return map[domain.ResourceType]bool{
+		// Phase 1 scanners
 		domain.ResourceTypeEC2:         c.EC2,
 		domain.ResourceTypeEBS:         c.EBS,
 		domain.ResourceTypeEBSSnapshot: c.EBSSnapshots,
 		domain.ResourceTypeElasticIP:   c.ElasticIP,
+		// Phase 2 scanners - P1
+		domain.ResourceTypeRDS:        c.RDS,
+		domain.ResourceTypeELB:        c.ELB,
+		domain.ResourceTypeNATGateway: c.NATGateway,
+		// Phase 2 scanners - P2
+		domain.ResourceTypeElastiCache: c.ElastiCache,
+		domain.ResourceTypeOpenSearch:  c.OpenSearch,
+		domain.ResourceTypeEKS:         c.EKS,
+		// Phase 2 scanners - P3
+		domain.ResourceTypeRedshift:  c.Redshift,
+		domain.ResourceTypeSageMaker: c.SageMaker,
+		domain.ResourceTypeAMI:       c.AMI,
+		domain.ResourceTypeLogs:      c.Logs,
 	}
 }
 
@@ -204,12 +238,36 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("expiration.tag_name", "expiration-date")
 	v.SetDefault("expiration.date_format", "2006-01-02")
 	v.SetDefault("expiration.default_days", 30)
+	v.SetDefault("expiration.force_delete_protected", false)
+	v.SetDefault("expiration.eks_cascade_delete", false)
+	v.SetDefault("expiration.logs_skip_patterns", []string{
+		"/aws/lambda/*",
+		"/aws/eks/*",
+		"/aws/rds/*",
+		"/aws/elasticbeanstalk/*",
+	})
 
-	// Scanner defaults - all enabled by default
+	// Scanner defaults - Phase 1 (all enabled by default)
 	v.SetDefault("scanners.ec2", true)
 	v.SetDefault("scanners.ebs", true)
 	v.SetDefault("scanners.ebs_snapshots", true)
 	v.SetDefault("scanners.elastic_ip", true)
+
+	// Scanner defaults - Phase 2 P1 (all enabled by default)
+	v.SetDefault("scanners.rds", true)
+	v.SetDefault("scanners.elb", true)
+	v.SetDefault("scanners.nat_gateway", true)
+
+	// Scanner defaults - Phase 2 P2 (all enabled by default)
+	v.SetDefault("scanners.elasticache", true)
+	v.SetDefault("scanners.opensearch", true)
+	v.SetDefault("scanners.eks", true)
+
+	// Scanner defaults - Phase 2 P3 (all enabled by default)
+	v.SetDefault("scanners.redshift", true)
+	v.SetDefault("scanners.sagemaker", true)
+	v.SetDefault("scanners.ami", true)
+	v.SetDefault("scanners.logs", true)
 
 	// Notification defaults
 	v.SetDefault("notifications.enabled", true)

@@ -8,7 +8,15 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials/stscreds"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/eks"
+	"github.com/aws/aws-sdk-go-v2/service/elasticache"
+	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2"
+	"github.com/aws/aws-sdk-go-v2/service/opensearch"
+	"github.com/aws/aws-sdk-go-v2/service/rds"
+	"github.com/aws/aws-sdk-go-v2/service/redshift"
+	"github.com/aws/aws-sdk-go-v2/service/sagemaker"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
 
 	"github.com/maxkrivich/cloud-janitor/internal/domain"
@@ -60,6 +68,79 @@ func (f *ClientFactory) EC2Client(ctx context.Context, account domain.Account, r
 		return nil, err
 	}
 	return ec2.NewFromConfig(cfg), nil
+}
+
+// RDSClient returns an RDS client for the specified account and region.
+func (f *ClientFactory) RDSClient(ctx context.Context, account domain.Account, region string) (*rds.Client, error) {
+	cfg, err := f.GetConfig(ctx, account, region)
+	if err != nil {
+		return nil, err
+	}
+	return rds.NewFromConfig(cfg), nil
+}
+
+// ELBv2Client returns an Elastic Load Balancing v2 client for the specified account and region.
+// This client handles both Application Load Balancers (ALB) and Network Load Balancers (NLB).
+func (f *ClientFactory) ELBv2Client(ctx context.Context, account domain.Account, region string) (*elasticloadbalancingv2.Client, error) {
+	cfg, err := f.GetConfig(ctx, account, region)
+	if err != nil {
+		return nil, err
+	}
+	return elasticloadbalancingv2.NewFromConfig(cfg), nil
+}
+
+// ElastiCacheClient returns an ElastiCache client for the specified account and region.
+func (f *ClientFactory) ElastiCacheClient(ctx context.Context, account domain.Account, region string) (*elasticache.Client, error) {
+	cfg, err := f.GetConfig(ctx, account, region)
+	if err != nil {
+		return nil, err
+	}
+	return elasticache.NewFromConfig(cfg), nil
+}
+
+// OpenSearchClient returns an OpenSearch client for the specified account and region.
+func (f *ClientFactory) OpenSearchClient(ctx context.Context, account domain.Account, region string) (*opensearch.Client, error) {
+	cfg, err := f.GetConfig(ctx, account, region)
+	if err != nil {
+		return nil, err
+	}
+	return opensearch.NewFromConfig(cfg), nil
+}
+
+// EKSClient returns an EKS client for the specified account and region.
+func (f *ClientFactory) EKSClient(ctx context.Context, account domain.Account, region string) (*eks.Client, error) {
+	cfg, err := f.GetConfig(ctx, account, region)
+	if err != nil {
+		return nil, err
+	}
+	return eks.NewFromConfig(cfg), nil
+}
+
+// RedshiftClient returns a Redshift client for the specified account and region.
+func (f *ClientFactory) RedshiftClient(ctx context.Context, account domain.Account, region string) (*redshift.Client, error) {
+	cfg, err := f.GetConfig(ctx, account, region)
+	if err != nil {
+		return nil, err
+	}
+	return redshift.NewFromConfig(cfg), nil
+}
+
+// SageMakerClient returns a SageMaker client for the specified account and region.
+func (f *ClientFactory) SageMakerClient(ctx context.Context, account domain.Account, region string) (*sagemaker.Client, error) {
+	cfg, err := f.GetConfig(ctx, account, region)
+	if err != nil {
+		return nil, err
+	}
+	return sagemaker.NewFromConfig(cfg), nil
+}
+
+// CloudWatchLogsClient returns a CloudWatch Logs client for the specified account and region.
+func (f *ClientFactory) CloudWatchLogsClient(ctx context.Context, account domain.Account, region string) (*cloudwatchlogs.Client, error) {
+	cfg, err := f.GetConfig(ctx, account, region)
+	if err != nil {
+		return nil, err
+	}
+	return cloudwatchlogs.NewFromConfig(cfg), nil
 }
 
 // GetAccountID returns the current AWS account ID.

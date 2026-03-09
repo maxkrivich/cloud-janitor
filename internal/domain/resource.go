@@ -10,14 +10,21 @@ type ResourceType string
 
 const (
 	// AWS resource types (ordered by cost priority, 1 = most expensive).
-	ResourceTypeAWSEC2       ResourceType = "aws:ec2"      // Priority 1: Compute
-	ResourceTypeAWSRDS       ResourceType = "aws:rds"      // Priority 2: Compute
-	ResourceTypeAWSElasticIP ResourceType = "aws:eip"      // Priority 3: Compute
-	ResourceTypeAWSEBS       ResourceType = "aws:ebs"      // Priority 4: Storage
-	ResourceTypeAWSELB       ResourceType = "aws:elb"      // Priority 5: Compute
-	ResourceTypeAWSSnapshot  ResourceType = "aws:snapshot" // Priority 6: Storage
-	ResourceTypeAWSECR       ResourceType = "aws:ecr"      // Priority 7: Storage
-	ResourceTypeAWSAMI       ResourceType = "aws:ami"      // Priority 8: Storage
+	ResourceTypeAWSEC2         ResourceType = "aws:ec2"         // Priority 1: Compute - EC2 instances
+	ResourceTypeAWSRDS         ResourceType = "aws:rds"         // Priority 2: Compute - RDS database instances
+	ResourceTypeAWSNATGateway  ResourceType = "aws:nat-gateway" // Priority 3: Compute - NAT Gateways
+	ResourceTypeAWSELB         ResourceType = "aws:elb"         // Priority 4: Compute - Load Balancers (ALB/NLB)
+	ResourceTypeAWSElasticIP   ResourceType = "aws:eip"         // Priority 5: Compute - Elastic IPs
+	ResourceTypeAWSElastiCache ResourceType = "aws:elasticache" // Priority 6: Compute - ElastiCache clusters
+	ResourceTypeAWSOpenSearch  ResourceType = "aws:opensearch"  // Priority 7: Compute - OpenSearch domains
+	ResourceTypeAWSEKS         ResourceType = "aws:eks"         // Priority 8: Compute - EKS clusters
+	ResourceTypeAWSRedshift    ResourceType = "aws:redshift"    // Priority 9: Compute - Redshift clusters
+	ResourceTypeAWSSageMaker   ResourceType = "aws:sagemaker"   // Priority 10: Compute - SageMaker notebooks
+	ResourceTypeAWSEBS         ResourceType = "aws:ebs"         // Priority 11: Storage - EBS volumes
+	ResourceTypeAWSSnapshot    ResourceType = "aws:snapshot"    // Priority 12: Storage - EBS snapshots
+	ResourceTypeAWSAMI         ResourceType = "aws:ami"         // Priority 13: Storage - AMIs
+	ResourceTypeAWSLogs        ResourceType = "aws:logs"        // Priority 14: Storage - CloudWatch Log Groups
+	ResourceTypeAWSECR         ResourceType = "aws:ecr"         // Priority 15: Storage - ECR images (not implemented)
 
 	// GCP resource types (ordered by cost priority).
 	ResourceTypeGCPInstance ResourceType = "gcp:compute-instance" // Priority 1: Compute
@@ -41,6 +48,14 @@ const (
 	ResourceTypeElasticIP   ResourceType = "elastic_ip"
 	ResourceTypeELB         ResourceType = "elb"
 	ResourceTypeRDS         ResourceType = "rds"
+	ResourceTypeNATGateway  ResourceType = "nat_gateway"
+	ResourceTypeElastiCache ResourceType = "elasticache"
+	ResourceTypeOpenSearch  ResourceType = "opensearch"
+	ResourceTypeEKS         ResourceType = "eks"
+	ResourceTypeRedshift    ResourceType = "redshift"
+	ResourceTypeSageMaker   ResourceType = "sagemaker"
+	ResourceTypeLogs        ResourceType = "logs"
+	ResourceTypeAMI         ResourceType = "ami"
 )
 
 // String returns the string representation of the resource type.

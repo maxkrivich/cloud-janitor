@@ -75,13 +75,19 @@ Resources are categorized by cost type:
 | Priority | Resource Type | Cost Type | Status | Est. Monthly Cost |
 |----------|--------------|-----------|--------|-------------------|
 | 1 | **EC2 Instances** | Compute | ✅ Complete | $50-500+ |
-| 2 | **RDS Instances** | Compute | 🔜 Phase 2 | $100-1000+ |
+| 2 | **RDS Instances** | Compute | ✅ Complete | $100-1000+ |
 | 3 | **Elastic IPs** (unattached) | Compute | ✅ Complete | $3.60 each |
 | 4 | **EBS Volumes** | Storage | ✅ Complete | $10-100 |
-| 5 | **Load Balancers** (ALB/NLB) | Compute | 🔜 Phase 2 | $20-50 each |
+| 5 | **Load Balancers** (ALB/NLB) | Compute | ✅ Complete | $20-50 each |
 | 6 | **EBS Snapshots** | Storage | ✅ Complete | $5-50 |
-| 7 | **ECR Images** | Storage | 🔜 Phase 3 | $1-20 |
-| 8 | **AMIs** | Storage | 🔜 Phase 3 | $1-10 |
+| 7 | **NAT Gateways** | Compute | ✅ Complete | $30-100+ |
+| 8 | **ElastiCache Clusters** | Compute | ✅ Complete | $50-500+ |
+| 9 | **OpenSearch Domains** | Compute | ✅ Complete | $100-1000+ |
+| 10 | **EKS Clusters** | Compute | ✅ Complete | $70+ (control plane) |
+| 11 | **Redshift Clusters** | Compute | ✅ Complete | $180-2000+ |
+| 12 | **SageMaker Notebooks** | Compute | ✅ Complete | $50-500+ |
+| 13 | **AMIs** | Storage | ✅ Complete | $1-10 |
+| 14 | **CloudWatch Log Groups** | Storage | ✅ Complete | $0.50/GB ingested |
 
 ### GCP (Planned)
 
@@ -127,12 +133,37 @@ expiration:
     - "Environment=production"
     - "DoNotDelete=true"
     - "expiration-date=never"
+  
+  # Force delete RDS instances with deletion protection enabled
+  force_delete_protected: false
+  
+  # Delete EKS node groups before deleting clusters
+  eks_cascade_delete: true
+  
+  # Skip CloudWatch log groups matching these patterns
+  logs_skip_patterns:
+    - "/aws/lambda/*"
+    - "/aws/rds/*"
+    - "/aws/eks/*"
 
 scanners:
+  # Phase 1 scanners
   ec2: true
   ebs: true
   ebs_snapshots: true
   elastic_ip: true
+  
+  # Phase 2 scanners
+  rds: true
+  elb: true
+  nat_gateway: true
+  elasticache: true
+  opensearch: true
+  eks: true
+  redshift: true
+  sagemaker: true
+  ami: true
+  logs: true
 
 output:
   format: table  # table, json
@@ -255,8 +286,17 @@ notifications:
 - Discord notifications (webhook, bot token modes)
 - Generic webhook notifications
 
-### Phase 2: Extended AWS Coverage
-- Additional scanners (ELB, RDS)
+### Phase 2: Extended AWS Coverage (Complete)
+- RDS Instances scanner
+- Load Balancers (ALB/NLB) scanner
+- NAT Gateways scanner
+- ElastiCache Clusters scanner
+- OpenSearch Domains scanner
+- EKS Clusters scanner (with cascade delete for node groups)
+- Redshift Clusters scanner
+- SageMaker Notebook Instances scanner
+- AMIs scanner (with associated snapshot cleanup)
+- CloudWatch Log Groups scanner (with skip patterns)
 - Multi-account support via assume role
 
 ### Phase 3: Extended Notifications (In Progress)
