@@ -198,6 +198,45 @@ func TestLogsRepository_List(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "handles ARN with :* suffix from DescribeLogGroups",
+			mockSetup: func() *mockLogsClient {
+				return &mockLogsClient{
+					describeLogGroupsOutput: &cloudwatchlogs.DescribeLogGroupsOutput{
+						LogGroups: []types.LogGroup{
+							{
+								LogGroupName: aws.String("/starred-arn/logs"),
+								// AWS DescribeLogGroups returns ARNs with :* suffix
+								Arn: aws.String("arn:aws:logs:us-east-1:123456789012:log-group:/starred-arn/logs:*"),
+							},
+						},
+					},
+					// ListTagsForResource expects ARN WITHOUT the :* suffix
+					listTagsForResourceOutputs: map[string]*cloudwatchlogs.ListTagsForResourceOutput{
+						"arn:aws:logs:us-east-1:123456789012:log-group:/starred-arn/logs": {
+							Tags: map[string]string{
+								ExpirationTagName: expDateStr,
+							},
+						},
+					},
+				}
+			},
+			accountID:    "123456789012",
+			region:       "us-east-1",
+			skipPatterns: nil,
+			want: []domain.Resource{
+				{
+					ID:        "/starred-arn/logs",
+					Type:      domain.ResourceTypeLogs,
+					Region:    "us-east-1",
+					AccountID: "123456789012",
+					Tags: map[string]string{
+						ExpirationTagName: expDateStr,
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
 			name: "handles never expires tag",
 			mockSetup: func() *mockLogsClient {
 				return &mockLogsClient{

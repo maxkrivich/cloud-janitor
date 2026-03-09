@@ -201,12 +201,10 @@ func (r *ELBRepository) loadBalancerToResource(lb types.LoadBalancer, tags []typ
 		resource.Tags[key] = value
 
 		if key == ExpirationTagName {
-			if value == NeverExpiresValue {
+			if IsNeverExpires(value) {
 				resource.NeverExpires = true
 			} else {
-				if t, err := time.Parse(ExpirationDateFormat, value); err == nil {
-					resource.ExpirationDate = &t
-				}
+				resource.ExpirationDate = ParseExpirationDate(value, resource.ID, "ELB")
 			}
 		}
 	}

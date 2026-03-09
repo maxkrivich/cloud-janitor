@@ -3,6 +3,7 @@ package aws
 import (
 	"context"
 	"fmt"
+	"log"
 	"path"
 	"strings"
 	"time"
@@ -166,12 +167,18 @@ func (r *LogsRepository) shouldSkip(logGroupName string) bool {
 
 // fetchTags retrieves tags for a log group ARN.
 // Errors are handled gracefully - returns empty tags on error.
+// Note: DescribeLogGroups returns ARNs with :* suffix, but ListTagsForResource
+// requires ARNs without the suffix, so we strip it here.
 func (r *LogsRepository) fetchTags(ctx context.Context, arn string) map[string]string {
+	// Strip the :* suffix if present (DescribeLogGroups returns ARNs with :* suffix)
+	cleanARN := strings.TrimSuffix(arn, ":*")
+
 	output, err := r.client.ListTagsForResource(ctx, &cloudwatchlogs.ListTagsForResourceInput{
-		ResourceArn: aws.String(arn),
+		ResourceArn: aws.String(cleanARN),
 	})
 	if err != nil {
-		// Handle errors gracefully - return empty tags
+		// Log the error for debugging but don't fail the operation
+		log.Printf("warning: failed to fetch tags for log group %s: %v", cleanARN, err)
 		return map[string]string{}
 	}
 	if output.Tags == nil {
@@ -198,12 +205,10 @@ func (r *LogsRepository) logGroupToResource(logGroup types.LogGroup, tags map[st
 		case "Name":
 			resource.Name = value
 		case ExpirationTagName:
-			if value == NeverExpiresValue {
+			if IsNeverExpires(value) {
 				resource.NeverExpires = true
 			} else {
-				if t, err := time.Parse(ExpirationDateFormat, value); err == nil {
-					resource.ExpirationDate = &t
-				}
+				resource.ExpirationDate = ParseExpirationDate(value, resource.ID, "CloudWatchLogs")
 			}
 		}
 	}

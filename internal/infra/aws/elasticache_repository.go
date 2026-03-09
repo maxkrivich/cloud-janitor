@@ -294,12 +294,10 @@ func (r *ElastiCacheRepository) clusterToResource(cluster types.CacheCluster, ta
 		case "Name":
 			resource.Name = value
 		case ExpirationTagName:
-			if value == NeverExpiresValue {
+			if IsNeverExpires(value) {
 				resource.NeverExpires = true
 			} else {
-				if t, err := time.Parse(ExpirationDateFormat, value); err == nil {
-					resource.ExpirationDate = &t
-				}
+				resource.ExpirationDate = ParseExpirationDate(value, resource.ID, "ElastiCache")
 			}
 		}
 	}
@@ -334,12 +332,10 @@ func (r *ElastiCacheRepository) replicationGroupToResource(replGroup types.Repli
 		case "Name":
 			resource.Name = value
 		case ExpirationTagName:
-			if value == NeverExpiresValue {
+			if IsNeverExpires(value) {
 				resource.NeverExpires = true
 			} else {
-				if t, err := time.Parse(ExpirationDateFormat, value); err == nil {
-					resource.ExpirationDate = &t
-				}
+				resource.ExpirationDate = ParseExpirationDate(value, resource.ID, "ElastiCache")
 			}
 		}
 	}

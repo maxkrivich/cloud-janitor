@@ -107,12 +107,10 @@ func (r *ElasticIPRepository) addressToResource(address types.Address) domain.Re
 		case "Name":
 			resource.Name = value
 		case ExpirationTagName:
-			if value == NeverExpiresValue {
+			if IsNeverExpires(value) {
 				resource.NeverExpires = true
 			} else {
-				if t, err := time.Parse(ExpirationDateFormat, value); err == nil {
-					resource.ExpirationDate = &t
-				}
+				resource.ExpirationDate = ParseExpirationDate(value, resource.ID, "ElasticIP")
 			}
 		}
 	}
