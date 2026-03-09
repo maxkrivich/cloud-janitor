@@ -50,6 +50,8 @@ build/
 .env.local
 .env.*.local
 
+cloud-janitor.yaml
+
 # Log files
 *.log
 

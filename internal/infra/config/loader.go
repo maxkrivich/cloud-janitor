@@ -137,8 +137,7 @@ func Load(configFile string) (*Config, error) {
 		}
 		v.AddConfigPath(".")
 		v.SetConfigType("yaml")
-		v.SetConfigName("cloud-janitor")
-		v.SetConfigName(".cloud-janitor")
+		v.SetConfigName("cloud-janitor") // looks for cloud-janitor.yaml
 	}
 
 	// Read environment variables
