@@ -161,6 +161,10 @@ func buildNotifier(cfg *config.Config) domain.Notifier {
 		}
 	}
 
+	if cfg.Notifications.Teams.Enabled && cfg.Notifications.Teams.WebhookURL != "" {
+		notifiers = append(notifiers, notify.NewTeamsNotifier(cfg.Notifications.Teams.WebhookURL))
+	}
+
 	if cfg.Notifications.Webhook.Enabled && cfg.Notifications.Webhook.URL != "" {
 		opts := []notify.WebhookOption{}
 		if len(cfg.Notifications.Webhook.Headers) > 0 {

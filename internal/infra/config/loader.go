@@ -90,6 +90,7 @@ type NotificationsConfig struct {
 	Enabled bool          `mapstructure:"enabled"`
 	Slack   SlackConfig   `mapstructure:"slack"`
 	Discord DiscordConfig `mapstructure:"discord"`
+	Teams   TeamsConfig   `mapstructure:"teams"`
 	Webhook WebhookConfig `mapstructure:"webhook"`
 }
 
@@ -116,6 +117,13 @@ type DiscordConfig struct {
 	WebhookURL string `mapstructure:"webhook_url"`
 	BotToken   string `mapstructure:"bot_token"`
 	ChannelID  string `mapstructure:"channel_id"`
+}
+
+// TeamsConfig holds Microsoft Teams notification settings.
+// Uses Incoming Webhook with MessageCard format.
+type TeamsConfig struct {
+	Enabled    bool   `mapstructure:"enabled"`
+	WebhookURL string `mapstructure:"webhook_url"`
 }
 
 // WebhookConfig holds generic webhook notification settings.
@@ -179,6 +187,7 @@ func Load(configFile string) (*Config, error) {
 	cfg.Notifications.Discord.WebhookURL = os.ExpandEnv(cfg.Notifications.Discord.WebhookURL)
 	cfg.Notifications.Discord.BotToken = os.ExpandEnv(cfg.Notifications.Discord.BotToken)
 	cfg.Notifications.Discord.ChannelID = os.ExpandEnv(cfg.Notifications.Discord.ChannelID)
+	cfg.Notifications.Teams.WebhookURL = os.ExpandEnv(cfg.Notifications.Teams.WebhookURL)
 	cfg.Notifications.Webhook.URL = os.ExpandEnv(cfg.Notifications.Webhook.URL)
 	for key, value := range cfg.Notifications.Webhook.Headers {
 		cfg.Notifications.Webhook.Headers[key] = os.ExpandEnv(value)
