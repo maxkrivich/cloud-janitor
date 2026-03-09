@@ -258,27 +258,32 @@ notifications:
 - TeamCity integration guide
 - Slack notifications for deletions
 
-### Phase 3: Multi-Cloud Foundation
+### Phase 3: Extended Notifications
+- Microsoft Teams notifier
+- Google Chat notifier
+- Telegram notifier
+
+### Phase 4: Multi-Cloud Foundation
 - Provider abstraction layer
 - Provider-specific resource types (aws:ec2, gcp:compute-instance, azure:vm)
 - Multi-provider configuration support
 - Environment-based authentication for all providers
 
-### Phase 4: GCP Support
+### Phase 5: GCP Support
 - GCP Compute Instance scanner
 - GCP Persistent Disk scanner
 - GCP Snapshot scanner
 - GCP Static IP scanner
 - Label-based expiration (GCP equivalent of tags)
 
-### Phase 5: Azure Support
+### Phase 6: Azure Support
 - Azure VM scanner
 - Azure Managed Disk scanner
 - Azure Snapshot scanner
 - Azure Public IP scanner
 - Tag-based expiration
 
-### Phase 6: Observability
+### Phase 7: Observability
 - Metrics export (Prometheus/CloudWatch)
 - Dashboard for cleanup statistics
 - Weekly summary reports

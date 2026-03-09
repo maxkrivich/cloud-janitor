@@ -106,12 +106,38 @@ func buildNotifier(cfg *config.Config) domain.Notifier {
 
 	var notifiers []domain.Notifier
 
-	if cfg.Notifications.Slack.Enabled && cfg.Notifications.Slack.WebhookURL != "" {
-		opts := []notify.SlackOption{}
-		if cfg.Notifications.Slack.Channel != "" {
-			opts = append(opts, notify.WithSlackChannel(cfg.Notifications.Slack.Channel))
+	if cfg.Notifications.Slack.Enabled {
+		var slackNotifier domain.Notifier
+		var err error
+
+		// Priority: App token > Bot token > Webhook URL
+		switch {
+		case cfg.Notifications.Slack.AppToken != "" &&
+			cfg.Notifications.Slack.BotToken != "" &&
+			cfg.Notifications.Slack.ChannelID != "":
+			slackNotifier, err = notify.NewSlackNotifierApp(
+				cfg.Notifications.Slack.AppToken,
+				cfg.Notifications.Slack.BotToken,
+				cfg.Notifications.Slack.ChannelID,
+			)
+		case cfg.Notifications.Slack.BotToken != "" && cfg.Notifications.Slack.ChannelID != "":
+			slackNotifier, err = notify.NewSlackNotifierBot(
+				cfg.Notifications.Slack.BotToken,
+				cfg.Notifications.Slack.ChannelID,
+			)
+		case cfg.Notifications.Slack.WebhookURL != "":
+			opts := []notify.SlackOption{}
+			if cfg.Notifications.Slack.Channel != "" {
+				opts = append(opts, notify.WithSlackChannel(cfg.Notifications.Slack.Channel))
+			}
+			slackNotifier = notify.NewSlackNotifierWebhook(cfg.Notifications.Slack.WebhookURL, opts...)
 		}
-		notifiers = append(notifiers, notify.NewSlackNotifier(cfg.Notifications.Slack.WebhookURL, opts...))
+
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "warning: failed to create Slack notifier: %v\n", err)
+		} else if slackNotifier != nil {
+			notifiers = append(notifiers, slackNotifier)
+		}
 	}
 
 	if cfg.Notifications.Discord.Enabled {

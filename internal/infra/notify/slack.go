@@ -2,13 +2,11 @@
 package notify
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
-	"net/http"
 	"strings"
-	"time"
+
+	"github.com/slack-go/slack"
 
 	"github.com/maxkrivich/cloud-janitor/internal/domain"
 )
@@ -16,25 +14,23 @@ import (
 // Compile-time interface check.
 var _ domain.Notifier = (*SlackNotifier)(nil)
 
-// SlackNotifier sends notifications to Slack via webhooks.
-type SlackNotifier struct {
-	webhookURL string
-	channel    string
-	client     *http.Client
-}
+// slackMode represents the authentication mode for Slack.
+type slackMode int
 
-// NewSlackNotifier creates a new SlackNotifier.
-func NewSlackNotifier(webhookURL string, opts ...SlackOption) *SlackNotifier {
-	n := &SlackNotifier{
-		webhookURL: webhookURL,
-		client: &http.Client{
-			Timeout: 10 * time.Second,
-		},
-	}
-	for _, opt := range opts {
-		opt(n)
-	}
-	return n
+const (
+	slackModeWebhook slackMode = iota + 1
+	slackModeBot
+	slackModeApp
+)
+
+// SlackNotifier sends notifications to Slack using slack-go/slack.
+type SlackNotifier struct {
+	client     *slack.Client
+	webhookURL string
+	channelID  string
+	channel    string // Optional channel override
+	mode       slackMode
+	debug      bool
 }
 
 // SlackOption configures a SlackNotifier.
@@ -47,26 +43,101 @@ func WithSlackChannel(channel string) SlackOption {
 	}
 }
 
-// WithSlackHTTPClient sets a custom HTTP client.
-func WithSlackHTTPClient(client *http.Client) SlackOption {
+// WithSlackDebug enables debug logging.
+func WithSlackDebug(debug bool) SlackOption {
 	return func(n *SlackNotifier) {
-		n.client = client
+		n.debug = debug
 	}
+}
+
+// NewSlackNotifierWebhook creates a notifier using a webhook URL.
+func NewSlackNotifierWebhook(webhookURL string, opts ...SlackOption) *SlackNotifier {
+	n := &SlackNotifier{
+		webhookURL: webhookURL,
+		mode:       slackModeWebhook,
+	}
+
+	for _, opt := range opts {
+		opt(n)
+	}
+
+	return n
+}
+
+// NewSlackNotifierBot creates a notifier using a bot token.
+func NewSlackNotifierBot(botToken, channelID string, opts ...SlackOption) (*SlackNotifier, error) {
+	if botToken == "" {
+		return nil, fmt.Errorf("bot token is required")
+	}
+	if channelID == "" {
+		return nil, fmt.Errorf("channel ID is required")
+	}
+
+	n := &SlackNotifier{
+		channelID: channelID,
+		mode:      slackModeBot,
+	}
+
+	for _, opt := range opts {
+		opt(n)
+	}
+
+	clientOpts := []slack.Option{}
+	if n.debug {
+		clientOpts = append(clientOpts, slack.OptionDebug(true))
+	}
+
+	n.client = slack.New(botToken, clientOpts...)
+
+	return n, nil
+}
+
+// NewSlackNotifierApp creates a notifier using an app token (Socket Mode ready).
+func NewSlackNotifierApp(appToken, botToken, channelID string, opts ...SlackOption) (*SlackNotifier, error) {
+	if appToken == "" {
+		return nil, fmt.Errorf("app token is required")
+	}
+	if botToken == "" {
+		return nil, fmt.Errorf("bot token is required")
+	}
+	if channelID == "" {
+		return nil, fmt.Errorf("channel ID is required")
+	}
+
+	n := &SlackNotifier{
+		channelID: channelID,
+		mode:      slackModeApp,
+	}
+
+	for _, opt := range opts {
+		opt(n)
+	}
+
+	clientOpts := []slack.Option{
+		slack.OptionAppLevelToken(appToken),
+	}
+	if n.debug {
+		clientOpts = append(clientOpts, slack.OptionDebug(true))
+	}
+
+	n.client = slack.New(botToken, clientOpts...)
+
+	return n, nil
 }
 
 // NotifyTagged sends a notification about tagged resources.
 func (n *SlackNotifier) NotifyTagged(ctx context.Context, event domain.NotificationEvent) error {
-	msg := n.buildTaggedMessage(event)
-	return n.send(ctx, msg)
+	blocks := n.buildTaggedBlocks(event)
+	return n.send(ctx, blocks, n.buildTaggedFallbackText(event))
 }
 
 // NotifyDeleted sends a notification about deleted resources.
 func (n *SlackNotifier) NotifyDeleted(ctx context.Context, event domain.NotificationEvent) error {
-	msg := n.buildDeletedMessage(event)
-	return n.send(ctx, msg)
+	blocks := n.buildDeletedBlocks(event)
+	return n.send(ctx, blocks, n.buildDeletedFallbackText(event))
 }
 
-func (n *SlackNotifier) buildTaggedMessage(event domain.NotificationEvent) slackMessage {
+func (n *SlackNotifier) buildTaggedBlocks(event domain.NotificationEvent) []slack.Block {
 	var expDate string
 	if event.ExpirationDate != nil {
 		expDate = event.ExpirationDate.Format("2006-01-02")
@@ -77,49 +148,87 @@ func (n *SlackNotifier) buildTaggedMessage(event domain.NotificationEvent) slack
 		accountName = event.AccountID
 	}
 
-	text := fmt.Sprintf(":label: *Cloud Janitor: Resources Tagged for Expiration*\n\n"+
-		"*Account:* %s\n"+
-		"*Region:* %s\n\n"+
-		"The following resources have been tagged with expiration date *%s*:\n\n",
-		accountName, event.Region, expDate)
+	blocks := []slack.Block{
+		// Header
+		slack.NewHeaderBlock(
+			slack.NewTextBlockObject(slack.PlainTextType, "🏷️ Cloud Janitor: Resources Tagged for Expiration", true, false),
+		),
 
-	text += n.formatResourceTable(event.Resources)
+		// Context (Account & Region)
+		slack.NewContextBlock(
+			"context",
+			slack.NewTextBlockObject(slack.MarkdownType, fmt.Sprintf("*Account:* %s  •  *Region:* %s", accountName, event.Region), false, false),
+		),
 
-	text += fmt.Sprintf("\n:warning: These resources will be automatically deleted on *%s*.\n\n"+
-		"To keep a resource, update its `expiration-date` tag to a future date or `never`.", expDate)
+		// Divider
+		slack.NewDividerBlock(),
 
-	msg := slackMessage{
-		Text: text,
+		// Section with expiration info
+		slack.NewSectionBlock(
+			slack.NewTextBlockObject(slack.MarkdownType,
+				fmt.Sprintf("The following resources have been tagged with expiration date *%s*:", expDate),
+				false, false),
+			nil, nil,
+		),
+
+		// Resource table
+		slack.NewSectionBlock(
+			slack.NewTextBlockObject(slack.MarkdownType, n.formatResourceTable(event.Resources), false, false),
+			nil, nil,
+		),
+
+		// Divider
+		slack.NewDividerBlock(),
+
+		// Warning footer
+		slack.NewContextBlock(
+			"footer",
+			slack.NewTextBlockObject(slack.MarkdownType,
+				fmt.Sprintf("⚠️ These resources will be automatically deleted on *%s*. Update the `expiration-date` tag to keep them.", expDate),
+				false, false),
+		),
 	}
-	if n.channel != "" {
-		msg.Channel = n.channel
-	}
 
-	return msg
+	return blocks
 }
 
-func (n *SlackNotifier) buildDeletedMessage(event domain.NotificationEvent) slackMessage {
+func (n *SlackNotifier) buildDeletedBlocks(event domain.NotificationEvent) []slack.Block {
 	accountName := event.AccountName
 	if accountName == "" {
 		accountName = event.AccountID
 	}
 
-	text := fmt.Sprintf(":wastebasket: *Cloud Janitor: Resources Deleted*\n\n"+
-		"*Account:* %s\n"+
-		"*Region:* %s\n\n"+
-		"The following expired resources have been deleted:\n\n",
-		accountName, event.Region)
+	blocks := []slack.Block{
+		// Header
+		slack.NewHeaderBlock(
+			slack.NewTextBlockObject(slack.PlainTextType, "🗑️ Cloud Janitor: Resources Deleted", true, false),
+		),
 
-	text += n.formatResourceTable(event.Resources)
+		// Context (Account & Region)
+		slack.NewContextBlock(
+			"context",
+			slack.NewTextBlockObject(slack.MarkdownType, fmt.Sprintf("*Account:* %s  •  *Region:* %s", accountName, event.Region), false, false),
+		),
 
-	msg := slackMessage{
-		Text: text,
+		// Divider
+		slack.NewDividerBlock(),
+
+		// Section with info
+		slack.NewSectionBlock(
+			slack.NewTextBlockObject(slack.MarkdownType,
+				"The following expired resources have been deleted:",
+				false, false),
+			nil, nil,
+		),
+
+		// Resource table
+		slack.NewSectionBlock(
+			slack.NewTextBlockObject(slack.MarkdownType, n.formatResourceTable(event.Resources), false, false),
+			nil, nil,
+		),
 	}
-	if n.channel != "" {
-		msg.Channel = n.channel
-	}
 
-	return msg
+	return blocks
 }
 
 func (n *SlackNotifier) formatResourceTable(resources []domain.Resource) string {
@@ -133,38 +242,76 @@ func (n *SlackNotifier) formatResourceTable(resources []domain.Resource) string 
 		if len(name) > 20 {
 			name = name[:17] + "..."
 		}
-		sb.WriteString(fmt.Sprintf("%-12s | %-24s | %s\n", r.Type, r.ID, name))
+		resourceType := string(r.Type)
+		if len(resourceType) > 12 {
+			resourceType = resourceType[:12]
+		}
+		resourceID := r.ID
+		if len(resourceID) > 24 {
+			resourceID = resourceID[:21] + "..."
+		}
+		sb.WriteString(fmt.Sprintf("%-12s | %-24s | %s\n", resourceType, resourceID, name))
 	}
-	sb.WriteString("```\n")
+	sb.WriteString("```")
 	return sb.String()
 }
 
-func (n *SlackNotifier) send(ctx context.Context, msg slackMessage) error {
-	body, err := json.Marshal(msg)
-	if err != nil {
-		return fmt.Errorf("marshaling slack message: %w", err)
+func (n *SlackNotifier) buildTaggedFallbackText(event domain.NotificationEvent) string {
+	var expDate string
+	if event.ExpirationDate != nil {
+		expDate = event.ExpirationDate.Format("2006-01-02")
+	}
+	return fmt.Sprintf("Cloud Janitor: %d resources tagged for expiration on %s", len(event.Resources), expDate)
+}
+
+func (n *SlackNotifier) buildDeletedFallbackText(event domain.NotificationEvent) string {
+	return fmt.Sprintf("Cloud Janitor: %d expired resources deleted", len(event.Resources))
+}
+
+func (n *SlackNotifier) send(ctx context.Context, blocks []slack.Block, fallbackText string) error {
+	switch n.mode {
+	case slackModeWebhook:
+		return n.sendViaWebhook(ctx, blocks, fallbackText)
+	case slackModeBot, slackModeApp:
+		return n.sendViaClient(ctx, blocks, fallbackText)
+	default:
+		return fmt.Errorf("unknown slack mode: %d", n.mode)
+	}
+}
+
+func (n *SlackNotifier) sendViaWebhook(_ context.Context, blocks []slack.Block, fallbackText string) error {
+	msg := &slack.WebhookMessage{
+		Text:   fallbackText,
+		Blocks: &slack.Blocks{BlockSet: blocks},
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, n.webhookURL, bytes.NewReader(body))
-	if err != nil {
-		return fmt.Errorf("creating slack request: %w", err)
+	if n.channel != "" {
+		msg.Channel = n.channel
 	}
-	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := n.client.Do(req)
+	err := slack.PostWebhook(n.webhookURL, msg)
 	if err != nil {
-		return fmt.Errorf("sending slack message: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("slack returned status %d", resp.StatusCode)
+		return fmt.Errorf("posting slack webhook: %w", err)
 	}
 
 	return nil
 }
 
-type slackMessage struct {
-	Channel string `json:"channel,omitempty"`
-	Text    string `json:"text"`
+func (n *SlackNotifier) sendViaClient(ctx context.Context, blocks []slack.Block, fallbackText string) error {
+	channelID := n.channelID
+	if n.channel != "" {
+		channelID = n.channel
+	}
+
+	opts := []slack.MsgOption{
+		slack.MsgOptionText(fallbackText, false),
+		slack.MsgOptionBlocks(blocks...),
+	}
+
+	_, _, err := n.client.PostMessageContext(ctx, channelID, opts...)
+	if err != nil {
+		return fmt.Errorf("posting slack message: %w", err)
+	}
+
+	return nil
 }
