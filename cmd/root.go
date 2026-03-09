@@ -114,8 +114,25 @@ func buildNotifier(cfg *config.Config) domain.Notifier {
 		notifiers = append(notifiers, notify.NewSlackNotifier(cfg.Notifications.Slack.WebhookURL, opts...))
 	}
 
-	if cfg.Notifications.Discord.Enabled && cfg.Notifications.Discord.WebhookURL != "" {
-		notifiers = append(notifiers, notify.NewDiscordNotifier(cfg.Notifications.Discord.WebhookURL))
+	if cfg.Notifications.Discord.Enabled {
+		var discordNotifier domain.Notifier
+		var err error
+
+		// Prefer bot token over webhook URL if both are provided
+		if cfg.Notifications.Discord.BotToken != "" && cfg.Notifications.Discord.ChannelID != "" {
+			discordNotifier, err = notify.NewDiscordNotifierBot(
+				cfg.Notifications.Discord.BotToken,
+				cfg.Notifications.Discord.ChannelID,
+			)
+		} else if cfg.Notifications.Discord.WebhookURL != "" {
+			discordNotifier, err = notify.NewDiscordNotifierWebhook(cfg.Notifications.Discord.WebhookURL)
+		}
+
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "warning: failed to create Discord notifier: %v\n", err)
+		} else if discordNotifier != nil {
+			notifiers = append(notifiers, discordNotifier)
+		}
 	}
 
 	if cfg.Notifications.Webhook.Enabled && cfg.Notifications.Webhook.URL != "" {

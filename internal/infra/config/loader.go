@@ -101,9 +101,14 @@ type SlackConfig struct {
 }
 
 // DiscordConfig holds Discord notification settings.
+// Supports two authentication modes:
+// 1. Webhook URL (simple): Just provide webhook_url
+// 2. Bot token (advanced): Provide bot_token and channel_id
 type DiscordConfig struct {
 	Enabled    bool   `mapstructure:"enabled"`
 	WebhookURL string `mapstructure:"webhook_url"`
+	BotToken   string `mapstructure:"bot_token"`
+	ChannelID  string `mapstructure:"channel_id"`
 }
 
 // WebhookConfig holds generic webhook notification settings.
@@ -162,6 +167,8 @@ func Load(configFile string) (*Config, error) {
 	// Expand environment variables in sensitive fields
 	cfg.Notifications.Slack.WebhookURL = os.ExpandEnv(cfg.Notifications.Slack.WebhookURL)
 	cfg.Notifications.Discord.WebhookURL = os.ExpandEnv(cfg.Notifications.Discord.WebhookURL)
+	cfg.Notifications.Discord.BotToken = os.ExpandEnv(cfg.Notifications.Discord.BotToken)
+	cfg.Notifications.Discord.ChannelID = os.ExpandEnv(cfg.Notifications.Discord.ChannelID)
 	cfg.Notifications.Webhook.URL = os.ExpandEnv(cfg.Notifications.Webhook.URL)
 	for key, value := range cfg.Notifications.Webhook.Headers {
 		cfg.Notifications.Webhook.Headers[key] = os.ExpandEnv(value)
