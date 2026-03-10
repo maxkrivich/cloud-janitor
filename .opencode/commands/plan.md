@@ -31,6 +31,13 @@ Then wait for the user's input.
 
 ## Process Steps
 
+## CRITICAL REMINDER
+
+**This command creates plans only. It does NOT implement them.**
+- After the plan is written, you MUST STOP
+- Wait for the user to run `/implement` explicitly
+- "Continue" or "proceed" means iterate on the plan, NOT implement it
+
 ### Step 1: Context Gathering & Initial Analysis
 
 1. **Read all mentioned files FULLY**:

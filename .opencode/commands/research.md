@@ -1,6 +1,5 @@
 ---
 description: Research and document codebase to understand how things work before planning
-agent: research
 ---
 
 # Research Codebase
@@ -126,6 +125,13 @@ Please review this research before proceeding. If the findings are incorrect or 
 
 When ready, use `/plan <feature> @.opencode/research/<file>.md` to create an implementation plan informed by this research.
 ```
+
+## CRITICAL: Do Not Skip Steps
+
+- **DO NOT proceed to implementation** after research
+- **DO NOT create a plan** without user review of research
+- **STOP** after presenting findings and wait for user direction
+- The workflow is: `/research` → user review → `/plan` → user review → `/implement`
 
 ## Tips for Effective Research
 

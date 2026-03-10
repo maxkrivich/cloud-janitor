@@ -7,6 +7,11 @@ agent: tdd
 
 You are tasked with implementing an approved technical plan from `.opencode/plans/`. Plans contain phases with specific changes and success criteria.
 
+**Note**: This command uses `agent: tdd` to spawn a fresh context. This is intentional:
+- Implementation should be based solely on the approved plan document
+- The plan file contains all necessary context and specifications
+- This prevents scope creep from conversation context
+
 ## Getting Started
 
 **Plan file:** @$1
