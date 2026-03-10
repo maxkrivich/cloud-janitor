@@ -192,6 +192,10 @@ Use this template:
 ## References
 - Research: `.opencode/research/[relevant].md`
 - Similar implementation: `[file:line]`
+
+---
+
+> ⚠️ **DO NOT IMPLEMENT** - This plan requires explicit `/implement` command to begin execution.
 ````
 
 ### Step 5: Review and Iterate
@@ -217,13 +221,20 @@ Please review it and let me know:
 ---
 **Plan complete.** Saved to `.opencode/plans/YYYY-MM-DD-<description>.md`
 
-When ready to implement, run:
+⚠️ **IMPORTANT: Do NOT implement this plan until the user explicitly runs:**
 `/implement @.opencode/plans/YYYY-MM-DD-<description>.md`
 
 The implementation will proceed phase-by-phase with pauses for manual verification.
 ```
 
 ## Important Guidelines
+
+### NEVER Implement Without Explicit Command
+- **Creating a plan does NOT authorize implementation**
+- After the plan is complete, STOP and wait for the user
+- Only begin implementation when the user explicitly runs `/implement`
+- If the user says "continue" or "proceed", ask if they want to run `/implement`
+- This rule is absolute - no exceptions
 
 ### Be Skeptical
 - Question vague requirements

@@ -110,3 +110,47 @@ docker-run:
 		-e AWS_PROFILE \
 		-v ~/.aws:/root/.aws:ro \
 		$(DOCKER_IMAGE):latest $(ARGS)
+
+# Integration test targets
+## test-integration: Run integration tests (requires AWS credentials)
+test-integration:
+	@if [ -z "$(TEST_AWS_ACCOUNT_ID)" ]; then \
+		echo "ERROR: TEST_AWS_ACCOUNT_ID is required"; \
+		echo ""; \
+		echo "Usage:"; \
+		echo "  TEST_AWS_ACCOUNT_ID=123456789012 make test-integration"; \
+		echo ""; \
+		echo "Optional environment variables:"; \
+		echo "  TEST_AWS_REGION         - AWS region (default: us-west-2)"; \
+		echo "  TEST_ROLE_ARN           - IAM role to assume for cross-account access"; \
+		echo "  TEST_EKS_ROLE_ARN       - IAM role for EKS clusters"; \
+		echo "  TEST_SAGEMAKER_ROLE_ARN - IAM role for SageMaker notebooks"; \
+		exit 1; \
+	fi
+	@echo "=== Running Integration Tests ==="
+	@echo "Account: $(TEST_AWS_ACCOUNT_ID)"
+	@echo "Region: $(or $(TEST_AWS_REGION),us-west-2)"
+	@if [ -n "$(TEST_ROLE_ARN)" ]; then echo "Role: $(TEST_ROLE_ARN)"; fi
+	@echo ""
+	@echo "WARNING: This will create real AWS resources."
+	@echo "Estimated cost: ~$$1-2 USD"
+	@echo ""
+	$(GOTEST) -v -tags=integration -timeout=90m -parallel=4 ./tests/integration/...
+
+## test-integration-fast: Run fast integration tests only (< 5 min, ~$0.10)
+test-integration-fast:
+	@if [ -z "$(TEST_AWS_ACCOUNT_ID)" ]; then \
+		echo "ERROR: TEST_AWS_ACCOUNT_ID is required"; \
+		exit 1; \
+	fi
+	@echo "Running fast integration tests (EIP, Logs, Snapshot, AMI, EBS)..."
+	$(GOTEST) -v -tags=integration -timeout=30m -run="TestEIP|TestLogs|TestSnapshot|TestAMI|TestEBS" ./tests/integration/...
+
+## test-integration-workflow: Run workflow test only
+test-integration-workflow:
+	@if [ -z "$(TEST_AWS_ACCOUNT_ID)" ]; then \
+		echo "ERROR: TEST_AWS_ACCOUNT_ID is required"; \
+		exit 1; \
+	fi
+	@echo "Running complete workflow test..."
+	$(GOTEST) -v -tags=integration -timeout=30m -run="TestCompleteWorkflow" ./tests/integration/...
