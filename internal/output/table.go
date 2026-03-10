@@ -115,24 +115,27 @@ func (f *TableFormatter) FormatRunResult(w io.Writer, result *service.RunResult,
 	// Errors
 	errorCount := result.TotalErrors()
 	if errorCount > 0 {
-		fmt.Fprintf(w, "\nErrors (%d):\n", errorCount)
+		fmt.Fprintf(w, "\nEncountered %d error(s):\n", errorCount)
 		fmt.Fprintln(w, strings.Repeat("-", 50))
 
 		for _, err := range result.Errors {
-			fmt.Fprintf(w, "  - %v\n", err)
+			fmt.Fprintf(w, "  • %v\n", err)
 		}
 
 		for key, tagResult := range result.TagResults {
 			for _, err := range tagResult.Errors {
-				fmt.Fprintf(w, "  - [%s] %v\n", key, err)
+				fmt.Fprintf(w, "  • [%s] %v\n", key, err)
 			}
 		}
 
 		for key, cleanupResult := range result.CleanupResults {
 			for _, err := range cleanupResult.Errors {
-				fmt.Fprintf(w, "  - [%s] %v\n", key, err)
+				fmt.Fprintf(w, "  • [%s] %v\n", key, err)
 			}
 		}
+
+		fmt.Fprintln(w)
+		fmt.Fprintln(w, "Tip: Use --dry-run to preview operations, or check IAM permissions if access denied.")
 	}
 
 	// Summary

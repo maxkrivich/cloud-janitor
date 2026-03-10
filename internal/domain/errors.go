@@ -1,20 +1,23 @@
 package domain
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 // Domain errors.
 var (
 	// ErrResourceNotFound indicates a resource was not found.
 	ErrResourceNotFound = errors.New("resource not found")
 
-	// ErrTagFailed indicates tagging a resource failed.
-	ErrTagFailed = errors.New("failed to tag resource")
+	// ErrTagFailed indicates tagging a resource was unsuccessful.
+	ErrTagFailed = errors.New("tag operation unsuccessful")
 
-	// ErrDeleteFailed indicates deleting a resource failed.
-	ErrDeleteFailed = errors.New("failed to delete resource")
+	// ErrDeleteFailed indicates deleting a resource was unsuccessful.
+	ErrDeleteFailed = errors.New("delete operation unsuccessful")
 
-	// ErrNotificationFailed indicates sending a notification failed.
-	ErrNotificationFailed = errors.New("failed to send notification")
+	// ErrNotificationFailed indicates sending a notification was unsuccessful.
+	ErrNotificationFailed = errors.New("notification delivery unsuccessful")
 )
 
 // ResourceError represents an error that occurred while processing a specific resource.
@@ -25,8 +28,10 @@ type ResourceError struct {
 	Err          error
 }
 
+// Error returns a user-friendly error message with resource ID prominent.
+// Format: "operation resourceID (resourceType): error"
 func (e *ResourceError) Error() string {
-	return e.Operation + " " + string(e.ResourceType) + " " + e.ResourceID + ": " + e.Err.Error()
+	return fmt.Sprintf("%s %s (%s): %s", e.Operation, e.ResourceID, e.ResourceType, e.Err.Error())
 }
 
 func (e *ResourceError) Unwrap() error {
