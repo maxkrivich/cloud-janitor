@@ -16,8 +16,9 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/redshift v1.62.3
 	github.com/aws/aws-sdk-go-v2/service/sagemaker v1.235.0
 	github.com/aws/aws-sdk-go-v2/service/sts v1.41.8
+	github.com/aws/smithy-go v1.24.2
 	github.com/bwmarrin/discordgo v0.29.0
-	github.com/slack-go/slack v0.19.0
+	github.com/slack-go/slack v0.20.0
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/viper v1.18.0
 )
@@ -33,7 +34,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/signin v1.0.7 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sso v1.30.12 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.35.16 // indirect
-	github.com/aws/smithy-go v1.24.2 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
